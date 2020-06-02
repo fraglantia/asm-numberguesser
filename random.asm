@@ -4,7 +4,7 @@ title: db "=== ASM NUMBER GUESSER ==="
 lentitle: equ 26
 
 diff: db "Difficulty:", 10, "[1]: Easy (1 number)", 10, "[2]: Medium (3 numbers)", 10, "[3]: Hard (5 numbers)", 10, "> "
-lendiff: equ 81					;
+lendiff: equ 81
 
 round1: db "== ROUND ["
 round2: db "] ==", 10
@@ -46,7 +46,7 @@ global _initXNum
 global _roundStart
 global _verdict
 
-_start:							; standard  gcc  entry point
+_start:							; entry point
 	push ebp
 	mov ebp, esp
 	sub esp, 24
@@ -120,9 +120,9 @@ _start:							; standard  gcc  entry point
 	int	0x80
 
 
-	mov	ebx, 0					; exit code, 0=normal
-	mov	eax, 1					; exit command to kernel
-	int	0x80					; interrupt 80 hex, call kernel
+	mov	ebx, 0					; syscall exit
+	mov	eax, 1
+	int	0x80
 
 
 ; bool verdict(int* guess, int* ans, int diff) -> prints verdict for each guesses
@@ -137,11 +137,11 @@ _verdict:
 	mov ecx, [ebp+16]
 	xor edx, edx
 
-	mov [ebp-4], eax 				; guess
-	mov [ebp-8], ebx 				; ans
-	mov [ebp-12], ecx 				; loop barrier/diff
-	mov [ebp-16], edx 				; loop ctr
-	mov dword [ebp-20], 0  			; correct ans
+	mov [ebp-4], eax 			; guess
+	mov [ebp-8], ebx 			; ans
+	mov [ebp-12], ecx 			; loop barrier/difficulty
+	mov [ebp-16], edx 			; loop ctr
+	mov dword [ebp-20], 0  		; correct ans
 
 	verdictloop:
 		mov edx, [ebp-16]
@@ -181,10 +181,10 @@ _verdict:
 		mov ebx, [ebx]
 		and ebx, 0xff
 
-		cmp eax, ebx
-		jg verhigh
-		jl verlow
-		jmp vercor
+		cmp eax, ebx 			; compare guess and ans
+		jg verhigh 				; case guess > ans
+		jl verlow 				; case guess < ans
+		jmp vercor 				; case gues==ans
 
 	verhigh:
 		mov	edx, lenverdicthigh
@@ -206,7 +206,7 @@ _verdict:
 
 	verprint:
 		mov ebx, [ebp-16]
-		inc ebx
+		inc ebx 				; loop ctr ++
 		mov [ebp-16], ebx
 		mov	ebx, 1
 		mov	eax, 4
@@ -214,10 +214,10 @@ _verdict:
 		jmp verdictloop
 
 	vercheck:
-		mov edx, [ebp-20]
+		mov edx, [ebp-20] 		; correct++
 		mov ecx, [ebp-12]
 		cmp edx, ecx
-		jl verzero
+		jl verzero 				; correct==dif ? return 1 : return 0
 		mov eax, 1
 		jmp verdone
 
@@ -229,7 +229,7 @@ _verdict:
 		ret
 
 
-; void roundStart(int roundNum, int difficulty) -> prints current round's instructions
+; void roundStart(int roundNum, int difficulty) -> prints current round's prompt
 _roundStart:
 	push ebp
 	mov ebp, esp
@@ -283,9 +283,9 @@ _initXNum:
 		mov cl, byte [ebp-4]
 		mov	ebx, [ebp+12]
 		lea ebx, [ebx+ecx]
-		mov byte [ebx], al
+		mov byte [ebx], al 		; resArr[i] = randNum()
 
-		inc ecx
+		inc ecx 				; i++
 		mov byte [ebp-4], cl
 
 		mov	edx, [ebp+8]
@@ -317,11 +317,11 @@ _askDifficulty:
 	sub esp, 4
 	mov dword [ebp-4], 0
 	
-	mov	edx,lendiff				; arg3, length of string to print
-	mov	ecx, diff				; arg2, pointer to string
-	mov	ebx, 1					; arg1, where to write, screen
-	mov	eax, 4					; write sysout command to int 80 hex
-	int	0x80					; interrupt 80 hex, call kernel
+	mov	edx,lendiff
+	mov	ecx, diff
+	mov	ebx, 1
+	mov	eax, 4
+	int	0x80
 
 	lea eax, [ebp-4]
 	push eax
@@ -330,14 +330,14 @@ _askDifficulty:
 	xor eax, eax
 	mov al, byte [ebp-4]
 
-	cmp eax, 1
+	cmp eax, 1 					; cases for difficulty input
 	je askDifficultyEasy
 	cmp eax, 2
 	je askDifficultyMedium
 	cmp eax, 3
 	je askDifficultyHard
 
-	askDifficultyEasy:
+	askDifficultyEasy: 
 		mov eax, 1
 		jmp askDifficultyDone
 
@@ -366,11 +366,11 @@ _randNum:
 	mov eax, 13
 	int 0x80
 
-	mov eax, [ebx] 			; a = time()
+	mov eax, [ebx] 				; a = time()
 	add eax, [rng]
-	mov ebx, 347 			; a*=347
+	mov ebx, 347 				; a*=347
 	mul ebx
-	add eax, 71 			; a+=71
+	add eax, 71 				; a+=71
 	inc dword [rng]
 
 	and eax, 0xff
@@ -387,11 +387,11 @@ _readXNum:
 	sub esp, 28
 	mov dword [ebp-28], 0
 
-	mov	edx, 24					; arg3, length of string to read
-	lea	ecx, [ebp-24]			; arg2, pointer to string
-	mov	ebx, 1					; arg1, where to write, screen
-	mov	eax, 3					; read command to int 80 hex
-	int	0x80					; interrupt 80 hex, call kernel
+	mov	edx, 24					; syscall read 24 chars
+	lea	ecx, [ebp-24]
+	mov	ebx, 1
+	mov	eax, 3
+	int	0x80
 
 	xor edx, edx
 	xor ecx, ecx 				; i=0
@@ -418,7 +418,7 @@ _readXNum:
 
 	done1:
 		mov byte [ebp-26], dl
-		mov dl, byte [ebp-28] 		; j
+		mov dl, byte [ebp-28] 	; j
 		mov ebx, [ebp+8] 		; b = resArr
 		mov [ebx+edx], eax 		; b[j] = n
 		xor eax, eax 			; n=0
@@ -442,9 +442,9 @@ _printNum:
 	push ebp
 	mov ebp, esp
 
-	sub esp, 8					; ebp-4 => buffer of number
+	sub esp, 8
 	mov dword [ebp-4], 0
-	mov dword [ebp-8], 0
+	mov dword [ebp-8], 0		; char s[8]
 
 	xor ecx, ecx				; i = 0
 
@@ -467,12 +467,12 @@ _printNum:
 		cmp eax, 0 				; if num!=0
 		jne printnumloop 		; loop
 
-	lea	edx,[ecx+1]				; arg3, length of string to print
-	lea ecx, [ebp]				; arg2, pointer to string
+	lea	edx,[ecx+1]				; write length
+	lea ecx, [ebp]				; string to write
 	sub ecx, edx
-	mov	ebx,1					; arg1, where to write, screen
-	mov	eax,4					; write sysout command to int 80 hex
-	int	0x80					; interrupt 80 hex, call kernel
+	mov	ebx, 1
+	mov	eax, 4
+	int	0x80 
 
 	mov eax, [ebp+8]
 
